@@ -1,39 +1,55 @@
-// In this module it is asked to create a smart contract with require(),assert() and revert() statements
-
-
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract Challenge {
-    function requireExample(int num) external pure returns (int) {
-        //Uses require to validate the given condition 
-        require(num > 0, "The number must be greater than zero");
-        
-        // It performs the multiplication i.e like it the entered number is multipled by 2 
-    
-        int result = num * 2;
-        
-        return result;
+
+contract SimpleToken {
+    address public owner;
+    uint256 public totalSupply;
+    mapping(address => uint256) public balances;
+    event TokensMinted(address indexed to, uint256 amount);
+    event TokensTransferred(address indexed from, address indexed to, uint256 amount);
+    event TokensBurned(address indexed from, uint256 amount);
+    constructor() {
+        owner = msg.sender;
     }
-    
-    function assertExample(uint num) external pure returns (uint) {
-        uint result;
-        
-        // Uses assert to ensure a condition that must always hold
-        // Here the assert statement checks the given number is not equal to zero  
-        //If it is equal to zero it will give an exception and revert the transaction.
-        assert(num != 0);
-        
-        // Performs the divison operation
-        result = 10 / num;
-        
-        return result;
+
+    function mint(address to, uint256 amount) external {
+        require(msg.sender == owner, "Only owner can mint tokens");
+        require(to != address(0), "Can't mint tokens to this address");
+        balances[to] += amount;
+        totalSupply += amount;
+        emit TokensMinted(to, amount);
     }
-    
-    function revertExample(bool condition) external pure {
-        // if the condition is true it will revert the transaction and gives the message the condition is true 
-        if (condition) {
-            revert(" The condition is true");
+
+    function transfer(address to, uint256 amount) external {
+        require(to != address(0), "Can't transfer to this address");
+        require(balances[msg.sender] >= amount, "Insufficient balance for transfer");
+        balances[msg.sender] -= amount;
+        balances[to] += amount;
+        emit TokensTransferred(msg.sender, to, amount);
+    }
+
+    function burn(uint256 amount) external {
+        require(balances[msg.sender] >= amount, "Insufficient tokens to burn");
+        balances[msg.sender] -= amount;
+        totalSupply -= amount;
+
+        emit TokensBurned(msg.sender, amount);
+    }
+
+    function checkInvariant() external view {
+        uint256 sumOfBalances = 0;
+        for (uint256 i = 0; i < totalSupply; i++) {
+            sumOfBalances += balances[address(uint160(i))];
         }
+        assert(sumOfBalances == totalSupply);
+    }
+
+    function updateOwner(address newOwner) external {
+        if (newOwner == address(0)) {
+            revert("New owner address can not be zero");
+        }
+        require(msg.sender == owner, "Only the current owner can update the owner");
+        owner = newOwner;
     }
 }
